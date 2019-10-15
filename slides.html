@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+    <title>reveal-md</title>
+    <link rel="stylesheet" href="./css/reveal.css" />
+    <link rel="stylesheet" href="./css/theme/black.css" id="theme" />
+    <link rel="stylesheet" href="./css/highlight/zenburn.css" />
+    <link rel="stylesheet" href="./css/print/paper.css" type="text/css" media="print" />
+
+  </head>
+  <body>
+    <div class="reveal">
+      <div class="slides"><section  data-markdown><script type="text/template">### Bindings For React Components in Fable
+</script></section><section  data-markdown><script type="text/template">
+### Table of Contents
+
+* About Me
+* About Fable
+* React in Fable
+* Interop in Fable
+* Interop with React components
+* Debugging Interop Code
+* Available Implementations
+* React DSL vs. Feliz
+* Proper Packaging
+</script></section><section  data-markdown><script type="text/template">
+### About Me
+
+- Github  @Zaid-Ajaj
+- Twitter @Zaid-Ajaj
+</script></section><section  data-markdown><script type="text/template">
+### About Fable
+
+- F#-to-Javascript compiler
+- Highly interoperable
+- Plays well with Javascript and Friends
+</script></section><section  data-markdown><script type="text/template">
+### React in Fable
+
+- Used in Elmish
+- Main rendering engine
+- Standalone Usage
+- Proper React
+</script></section><section ><section data-markdown><script type="text/template">
+### Interop in Fable
+
+- Basics with `Emit`: values and macros
+- `import`, `importDefault`
+- Object literals
+- using `createObj [ ]`
+- using `keyValueList` with discriminated unions
+- Anonymous Records
+- Creating object literals by hand
+</script></section><section data-markdown><script type="text/template">
+### Basics with `[<Emit>]`: Values
+
+```fsharp
+open Fable.Core
+open Fable.Core.JsInterop
+
+[<Emit("1")>]
+let one : int = jsNative
+```
+</script></section><section data-markdown><script type="text/template">
+### `[<Emit>]`: Macros
+
+```fsharp
+open Fable.Core
+open Fable.Core.JsInterop
+
+[<Emit("1")>]
+let one : int = jsNative
+
+[<Emit("console.log($0)")>]
+let log(x: 'a) : unit = jsNative
+
+log (one + one)
+```
+Compiles to
+```js
+console.log(1 + 1)
+```
+</script></section><section data-markdown><script type="text/template">
+### Creating object literals: `createObj`
+
+```fsharp
+[<Emit("1")>]
+let one : int = jsNative
+
+[<Emit("console.log($0)")>]
+let log(x: 'a) : unit = jsNative
+
+let options = createObj [
+    "one" ==> one
+    "two" ==> "whatever"
+    "three" ==> fun (x: int) -> x + 1
+]
+
+log options
+```
+</script></section><section data-markdown><script type="text/template">
+Compiles to
+```js
+export const options = {
+  one: 1,
+  two: "whatever",
+  three(x) {
+    return x + 1;
+  }
+};
+
+console.log(options);
+```
+</script></section><section data-markdown><script type="text/template">
+### Using `keyValueList`
+
+```fsharp
+open Fable.Core
+open Fable.Core.JsInterop
+
+type Person =
+    | Name of string
+    | Age of int
+
+let objectLiteral (xs: Person list) =
+    keyValueList CaseRules.None xs
+
+let person = objectLiteral [ Name "John"; Age 20 ]
+log person /// { Name: "John", Age: 20 }
+```</script></section></section></div>
+    </div>
+
+    <script src="./js/reveal.js"></script>
+
+    <script>
+      function extend() {
+        var target = {};
+        for (var i = 0; i < arguments.length; i++) {
+          var source = arguments[i];
+          for (var key in source) {
+            if (source.hasOwnProperty(key)) {
+              target[key] = source[key];
+            }
+          }
+        }
+        return target;
+      }
+
+      // Optional libraries used to extend on reveal.js
+      var deps = [
+        { src: './plugin/markdown/marked.js', condition: function() { return !!document.querySelector('[data-markdown]'); } },
+        { src: './plugin/markdown/markdown.js', condition: function() { return !!document.querySelector('[data-markdown]'); } },
+        { src: './plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+        { src: './plugin/zoom-js/zoom.js', async: true },
+        { src: './plugin/notes/notes.js', async: true },
+        { src: './plugin/math/math.js', async: true }
+      ];
+
+      // default options to init reveal.js
+      var defaultOptions = {
+        controls: true,
+        progress: true,
+        history: true,
+        center: true,
+        transition: 'default', // none/fade/slide/convex/concave/zoom
+        dependencies: deps
+      };
+
+      // options from URL query string
+      var queryOptions = Reveal.getQueryHash() || {};
+
+      var options = extend(defaultOptions, {}, queryOptions);
+    </script>
+
+
+    <script>
+      Reveal.initialize(options);
+    </script>
+  </body>
+</html>
