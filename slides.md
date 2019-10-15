@@ -136,3 +136,64 @@ let objectLiteral (xs: Person list) =
 let person = objectLiteral [ Name "John"; Age 20 ]
 log person /// { Name: "John", Age: 20 }
 ```
+
+----
+
+### Problems with `keyValueList`
+
+- Cannot *preprocess* safely
+- Hard to *postprocess* resulting object
+
+```fsharp
+type Style =
+    | Width of int
+    | Height of int
+
+let style = objectLiteral [ Width 200 ]
+
+log style // { Width: 200 }
+
+// How to get { Width: "200px" } instead?
+```
+
+----
+
+### "Hand-written" with static overloads
+
+```fsharp
+type IStyleAttribute = interface end
+
+module internal Interop =
+    let styleAttribute (key: string) (value: obj) =
+        unbox<IStyleAttribute> (key, value)
+
+type Style =
+    static member inline width(value: int) =
+        Interop.styleAttribute "width" (unbox<string> value + "px")
+    static member inline width(value: float) =
+        Interop.styleAttribute "width" (unbox<string> value + "px")
+    static member inline width(value: string) =
+        Interop.styleAttribute "width" value
+    static member inline height(value: int) =
+        Interop.styleAttribute "height" (unbox<string> value + "px")
+    static member inline height(value: float) =
+        Interop.styleAttribute "height" (unbox<string> value + "px")
+    static member inline height(value: string) =
+        Interop.styleAttribute "height" value
+```
+
+----
+
+### Consuming API
+
+```fsharp
+let inline createStyle (attributes: IStyleAttribute list)  =
+    createObj (unbox attributes)
+
+[
+    Style.width 150
+    Style.height "200px"
+]
+|> createStyle
+|> log /// { width: "150px", height: "200px" }
+```

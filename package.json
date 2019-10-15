@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "reveal-md slides.md"
+    "start": "reveal-md slides.md",
+    "publish-static": "reveal-md --static ./dist && node publish.js"
   },
   "keywords": [],
   "author": "",
