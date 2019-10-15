@@ -10,9 +10,8 @@
 * Interop in Fable
 * Interop with React components
 * Debugging Interop Code
-* Available Implementations
-* React DSL vs. Feliz
-* Proper Packaging
+* Available Implementations: React DSL vs. Feliz
+* Proper Packaging: Femto
 
 ---
 
@@ -43,12 +42,12 @@
 ### Interop in Fable
 
 - Basics with `Emit`: values and macros
-- `import`, `importDefault`
 - Object literals
 - using `createObj [ ]`
 - using `keyValueList` with discriminated unions
 - Anonymous Records
 - Creating object literals by hand
+- Imports with `import` and `importDefault`
 
 ----
 
@@ -174,12 +173,7 @@ type Style =
         Interop.styleAttribute "width" (unbox<string> value + "px")
     static member inline width(value: string) =
         Interop.styleAttribute "width" value
-    static member inline height(value: int) =
-        Interop.styleAttribute "height" (unbox<string> value + "px")
-    static member inline height(value: float) =
-        Interop.styleAttribute "height" (unbox<string> value + "px")
-    static member inline height(value: string) =
-        Interop.styleAttribute "height" value
+    // etc.
 ```
 
 ----
@@ -196,4 +190,56 @@ let inline createStyle (attributes: IStyleAttribute list)  =
 ]
 |> createStyle
 |> log /// { width: "150px", height: "200px" }
+```
+
+---
+
+### Interop with Fable: importing code
+
+Given the following project structure
+```
+ src
+  |
+  | -- Code.js
+  | -- App.fs
+  | -- App.fsproj
+```
+Where `Code.js` has the following exports:
+```js
+module.exports = {
+    value: 20
+}
+```
+The code can be used from Fable using
+
+----
+
+### Import
+
+You can import a specific value from an "exported" javascript module
+```fsharp
+// App.fs
+open Fable.Core
+open Fable.Core.JsInterop
+
+let value : int = import "value" "./Code.js"
+
+printfn "%d" value // 20
+```
+
+----
+
+### Import the entire module
+
+```fsharp
+// App.fs
+open Fable.Core
+open Fable.Core.JsInterop
+
+interface Code =
+    abstract value : int
+
+let code = importDefault "./Code.js"
+
+printfn "%d" code.value // 20
 ```
