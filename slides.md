@@ -437,3 +437,40 @@ module Style =
 
 - Default React DSL - `Fable.React`
 - [Feliz](https://zaid-ajaj.github.io/Feliz/#/)
+
+---
+
+### Proper packaging
+
+Introducing `Femto`
+
+- Manages npm dependencies of Fable packages
+- Optional package manager
+- Abstracts away nuget/paket/npm/yarn
+
+----
+
+### Npm dependency metadata
+
+Feliz
+
+```xml
+<NpmDependencies>
+    <NpmPackage Name="react" Version="&gt;= 16.8.0" />
+    <NpmPackage Name="react-dom" Version="&gt;= 16.8.0" />
+</NpmDependencies>
+```
+
+Feliz.Recharts
+
+```xml
+<NpmDependencies>
+    <NpmPackage Name="recharts" Version="&gt;= 1.7.1 &lt; 2.0.0" />
+</NpmDependencies>
+```
+
+----
+
+### Femto In Action
+
+starting from almost nothing: [fable-getting-started](https://github.com/Zaid-Ajaj/fable-getting-started)
