@@ -26,7 +26,7 @@
 
 - F#-to-Javascript compiler
 - Highly interoperable
-- Plays well with Javascript and Friends
+- Preserves semantics of F#
 
 ---
 
@@ -34,20 +34,29 @@
 
 - Used in Elmish
 - Main rendering engine
-- Standalone Usage
-- Proper React
+- Can be used standalone
+
+---
+
+### React DSL in Fable
+
+```fsharp
+div [ Id "main" ] [
+    h1 [ ClassName "shiny" ] [
+        span [ ] [ str "Hello Fable" ]
+    ]
+]
+```
 
 ---
 
 ### Interop in Fable
 
 - Basics with `Emit`: values and macros
+- Imports with `import` and `importDefault`
 - Object literals
 - using `createObj [ ]`
 - using `keyValueList` with discriminated unions
-- Anonymous Records
-- Creating object literals by hand
-- Imports with `import` and `importDefault`
 
 ----
 
@@ -81,6 +90,89 @@ Compiles to
 ```js
 console.log(1 + 1)
 ```
+
+----
+
+### Interop with Fable: importing code
+
+Given the following project structure
+```
+ src
+  |
+  | -- Code.js
+  | -- App.fs
+  | -- App.fsproj
+```
+Where `Code.js` has the following exports:
+```js
+module.exports = {
+    value: 20
+}
+```
+
+----
+
+### Import
+
+You can import a specific value from an "exported" javascript module
+```fsharp
+// App.fs
+open Fable.Core
+open Fable.Core.JsInterop
+
+let value : int = import "value" "./Code.js"
+
+printfn "%d" value // 20
+```
+
+----
+
+### Import the entire module
+
+```fsharp
+// App.fs
+open Fable.Core
+open Fable.Core.JsInterop
+
+interface Code =
+    abstract value : int
+
+let code = importDefault "./Code.js"
+
+printfn "%d" code.value // 20
+```
+
+----
+
+### Import the entire module untyped
+
+```fsharp
+// App.fs
+open Fable.Core
+open Fable.Core.JsInterop
+
+let code : obj = importDefault "./Code.js"
+
+printfn "%d" (!!code?value) // 20
+```
+
+----
+
+### Importing a npm package
+
+```fsharp
+// App.fs
+open Fable.Core
+open Fable.Core.JsInterop
+
+let package : obj = importDefault "package-name"
+
+let packageValue : string = import "value" "package-name"
+
+printfn "%s" packageValue
+```
+
+
 
 ----
 
@@ -136,12 +228,133 @@ let person = objectLiteral [ Name "John"; Age 20 ]
 log person /// { Name: "John", Age: 20 }
 ```
 
+---
+
+### Interop with React components
+
+So you can import stuff, but what the hell is this?
+
+```jsx
+<LineChart width={500} height={300} data={data}>
+  <XAxis dataKey="name"/>
+  <YAxis/>
+  <CartesianGrid stroke="#eee" strokeDasharray="5 5"/>
+  <Line type="monotone" dataKey="uv" stroke="#8884d8" />
+  <Line type="monotone" dataKey="pv" stroke="#82ca9d" />
+</LineChart>
+```
+
+----
+
+### Desugaring JSX Syntax
+
+The following JSX snippet
+```jsx
+const App = () => {
+    return (
+        <div className="shiny" style={{ width: "200px" }}>
+            Hello Fable
+        </div>
+    );
+}
+
+ReactDOM.render(<App />, document.getElementById("root"))
+```
+
+----
+
+is actually
+```js
+import { createElement } from 'react'
+import { render } from 'react-dom'
+
+const App = () => {
+    const props = {
+        className: "shiny",
+        style: {  width: "200px" }
+    }
+    return createElement('div', props, "Hello Fable");
+}
+
+render(createElement(App, {}, null),
+    document.getElementById("root"))
+```
+
+----
+
+### Nested elements
+
+```js
+<h1>
+    <span id="title">Title</span>
+</h1>
+```
+compiles to
+```js
+createElement('h1', { },
+    createElement('span', { id: "title" }, "title"))
+```
+
+----
+
+### Imported JSX
+
+```js
+import { createElement } from 'react'
+import { LineChart, XAxis, Line } from 'recharts'
+
+<LineChart data={data}>
+  <XAxis dataKey="x" />
+  <Line dataKey="y" />
+</LineChart>
+```
+compiles to
+```js
+import { createElement } from 'react'
+import { LineChart, XAxis, Line } from 'recharts'
+
+createElement(LineChart, { data: data },
+    createElement(XAxis, { dataKey: "x" }, null),
+    createElement(Line,  { dataKey: "y" }, null))
+```
+
+----
+
+### Putting it together: `ofImport`
+
+`ofImport` calls `createElement` internally
+
+```fsharp
+let inline lineChart
+    (props: IProp list)
+    (children: React.ReactElement list): React.ReactElement =
+    ofImport
+      "LineChart"
+      "recharts"
+      (keyValueList CaseRules.LowerFirst props)
+      children
+```
+
+---
+
+### Debugging Generated Code
+
+- Use fable-splitter
+- `fable-splitter demo -o ./dist`
+- The `--commonjs` flag
+
+
+---
+
+### A BETTER APPROACH
+
+A look into the [fable-recharts](https://github.com/fable-compiler/fable-recharts) implementation
+
+Discriminated unions for properties won't cut it
+
 ----
 
 ### Problems with `keyValueList`
-
-- Cannot *preprocess* safely
-- Hard to *postprocess* resulting object
 
 ```fsharp
 type Style =
@@ -192,54 +405,35 @@ let inline createStyle (attributes: IStyleAttribute list)  =
 |> log /// { width: "150px", height: "200px" }
 ```
 
+----
+
+### Enums made simple
+
+```fsharp
+type Style =
+    static member inline blablahblah () = ...
+
+module Style =
+    type textAlign =
+        static member inline center = Interop.mkStyle "textAlign" "center"
+        // etc.
+```
+
+----
+
+### Consuming API
+
+```fsharp
+[
+    Style.width 200
+    Style.height "150px"
+    Style.textAlign.center
+]
+```
+
 ---
 
-### Interop with Fable: importing code
+### Available Implementations
 
-Given the following project structure
-```
- src
-  |
-  | -- Code.js
-  | -- App.fs
-  | -- App.fsproj
-```
-Where `Code.js` has the following exports:
-```js
-module.exports = {
-    value: 20
-}
-```
-The code can be used from Fable using
-
-----
-
-### Import
-
-You can import a specific value from an "exported" javascript module
-```fsharp
-// App.fs
-open Fable.Core
-open Fable.Core.JsInterop
-
-let value : int = import "value" "./Code.js"
-
-printfn "%d" value // 20
-```
-
-----
-
-### Import the entire module
-
-```fsharp
-// App.fs
-open Fable.Core
-open Fable.Core.JsInterop
-
-interface Code =
-    abstract value : int
-
-let code = importDefault "./Code.js"
-
-printfn "%d" code.value // 20
-```
+- Default React DSL - `Fable.React`
+- [Feliz](https://zaid-ajaj.github.io/Feliz/#/)
